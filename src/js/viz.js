@@ -1,6 +1,6 @@
 import Springy from 'springy';
 import * as THREE from 'three';
-import './controls/OrbitControls';
+import './controls/TrackballControls';
 import NodeGraph from './nodeGraph';
 import Stats from '../../node_modules/stats.js/src/Stats';
 
@@ -23,7 +23,7 @@ module.exports = function () {
     console.log('Viz Loaded.')
 
     // Load our data set.
-    var nodeGraph = NodeGraph(100);
+    var nodeGraph = NodeGraph(200);
     console.log('NodeGraph has been loaded.')
 
     // Create a SpringyGraph.
@@ -108,7 +108,8 @@ function setupThreeRenderer(graph) {
     var scene = new THREE.Scene();
     // Camera Setup.
     var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100000);
-    var controls = new THREE.OrbitControls( camera );
+    var controls = new THREE.TrackballControls( camera );
+    controls.noRotate = true;
     
     camera.position.z = CameraPositionZ;
 
