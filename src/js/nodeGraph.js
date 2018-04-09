@@ -1,11 +1,21 @@
 import data from './data';
 
-module.exports = function () {
+module.exports = function (maxCount=null) {
     var rootNode = new Node('/');
     var fileList = getUniqueFiles(data);
-    fileList.forEach(file =>{
-        rootNode.add(file);
-    });
+    if(maxCount){
+        var nodeCount = 0;
+        for(var i = 0; i < maxCount && i < fileList.length; i++){
+            var file = fileList[i];
+            rootNode.add(file)
+        }
+    }else{
+        fileList.forEach(file =>{
+            rootNode.add(file);
+        });
+    }
+    
+    
     return rootNode;
 };
 

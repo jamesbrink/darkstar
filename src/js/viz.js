@@ -1,25 +1,29 @@
 import Springy from 'springy';
 import * as THREE from 'three';
+import './controls/OrbitControls';
 import NodeGraph from './nodeGraph';
+import Stats from '../../node_modules/stats.js/src/Stats';
 
 // Springy.js Specific values
 const SpringyStiffness = 200.0;
-const SpringyNodeRepulsion = 20.0;
-const SpringyDamping = 0.4;
+const SpringyNodeRepulsion = 200.0;
+const SpringyDamping = 0.2;
 
 // Three.js Specific values
 const NodeSize = 0.3;
 const NodeDefaultColor = 0x4286f4;
 const EdgeDefaultColor = 0xbc1d14;
+const NodeResolution = 4;
 
-const CameraPositionZ = 200.0;
+const CameraPositionZ = 50.0;
 
+const stats = new Stats();
 
 module.exports = function () {
     console.log('Viz Loaded.')
 
     // Load our data set.
-    var nodeGraph = NodeGraph();
+    var nodeGraph = NodeGraph(100);
     console.log('NodeGraph has been loaded.')
 
     // Create a SpringyGraph.
@@ -28,6 +32,11 @@ module.exports = function () {
     // Setup Renderers for both Springy.js and Three.js
     var springyRenderer = setupSpringyRender(graph);
     var threeRenderer = setupThreeRenderer(graph);
+    window.graph = graph;
+
+    
+    stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+    document.body.appendChild( stats.dom );
 
     // Start animation loops.
     runAnimation(springyRenderer, threeRenderer);
@@ -39,17 +48,33 @@ function createSpringyGraph(nodeGraph) {
     nodeGraph.traverse(n => {
         // Create node and node geometry.
         var viz3dNode = create3dNode();
-        var geometry = { edges: [], node: viz3dNode }
-        var nodeData = { label: n.data.name, geometry: geometry }
+        var geometry = { edges: [], edgeVectors: [], node: viz3dNode }
+        var nodeData = { label: n.data.name, geometry: geometry, graphNode: n}
         var newNode = graph.newNode(nodeData);
-        // Create edges and edge geometry
-        // TODO
+        n.springyNode = newNode;
     });
+
+    graph.nodes.forEach(n =>{
+        if (n.data.graphNode.parent != undefined){
+            var parent = n.data.graphNode.parent.springyNode;
+            if(parent){
+                var viz3dEdge = create3dEdge();
+                n.data.geometry.edgeVectors.push(viz3dEdge.vizAttrs.childVector);
+                n.data.geometry.edges.push(viz3dEdge);
+                parent.data.geometry.edgeVectors.push(viz3dEdge.vizAttrs.parentVector);
+                parent.data.geometry.edges.push(viz3dEdge);
+                graph.newEdge(parent, n);
+            }else{
+                // Root Node ?
+            }
+        }
+    });
+
     return graph;
 }
 
 function create3dNode() {
-    var geometry = new THREE.SphereGeometry(NodeSize, 32, 32);
+    var geometry = new THREE.SphereGeometry(NodeSize, NodeResolution, NodeResolution);
     var material = new THREE.MeshBasicMaterial({ color: NodeDefaultColor });
     var sphere = new THREE.Mesh(geometry, material);
     return sphere;
@@ -83,6 +108,8 @@ function setupThreeRenderer(graph) {
     var scene = new THREE.Scene();
     // Camera Setup.
     var camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100000);
+    var controls = new THREE.OrbitControls( camera );
+    
     camera.position.z = CameraPositionZ;
 
     // Three.js Renderer setup.
@@ -93,10 +120,13 @@ function setupThreeRenderer(graph) {
     // Add all of our graph nodes.
     graph.nodes.forEach(n =>{
         scene.add(n.data.geometry.node);
-    })
+        n.data.geometry.edges.forEach(edge =>{
+            scene.add(edge);
+        });
+    });
 
     // Attach some custom properties.
-    threeRenderer.vizAttrs = { scene: scene, camera: camera };
+    threeRenderer.vizAttrs = { scene: scene, camera: camera , controls: controls};
 
     return threeRenderer;
 }
@@ -120,13 +150,16 @@ function setupSpringyRender(graph) {
             var y = p.y
             node.data.geometry.node.position.x = p.x;
             node.data.geometry.node.position.y = p.y;
-            node.data.geometry.edges.forEach(edge => {
-                edge.x = p.x;
-                edge.y = p.y;
+            node.data.geometry.edgeVectors.forEach(vector => {
+                vector.x = p.x;
+                vector.y = p.y;
+            });
+            node.data.geometry.edges.forEach(edge =>{
                 edge.geometry.verticesNeedUpdate = true;
             });
         }
     );
+    
     // Attach some custom properties.
     springyRenderer.vizAttrs = { animationStarted: false };
 
@@ -134,12 +167,15 @@ function setupSpringyRender(graph) {
 }
 
 function runAnimation(springyRenderer, threeRenderer) {
+    stats.begin();
     requestAnimationFrame(runAnimation.bind(null, springyRenderer, threeRenderer));
     // controls.update();
     threeRenderer.render(threeRenderer.vizAttrs.scene, threeRenderer.vizAttrs.camera);
+    threeRenderer.vizAttrs.controls.update();
     if (springyRenderer.vizAttrs.animationStarted != true) {
         springyRenderer.vizAttrs.animationStarted = true;
         console.log('Starting Springy Animiation Loop.');
         springyRenderer.start();
     }
+    stats.end();
 }
