@@ -1,4 +1,4 @@
-import data from './data';
+import data from '../data/small/docker.git.history.log.small';
 
 module.exports = function (maxCount=null) {
     var rootNode = new Node('/');
