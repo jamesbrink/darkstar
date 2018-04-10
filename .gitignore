@@ -57,3 +57,8 @@ typings/
 # dotenv environment variables file
 .env
 
+# GitHub token file
+src/js/gitHubToken.js
+
+# Local datasets for testing.
+src/data/full/

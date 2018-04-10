@@ -24,12 +24,19 @@ const CameraPositionZ = 80.0;
 // Used for stats readout.
 const stats = new Stats();
 
-module.exports = function () {
-    console.log('Viz Loaded.')
+module.exports = function (commitHistory) {
+    console.info('Viz Loaded.')
 
     // Load our data set.
+    if(commitHistory){
+        commitHistory.then(commits =>{
+            console.debug('Commits:', commits);
+        }).catch(reason =>{
+            console.error('Error loading dataset:', reason);
+        });
+    }
     var nodeGraph = NodeGraph(200);
-    console.log('NodeGraph has been loaded.')
+    console.info('NodeGraph has been loaded.')
 
     // Create a SpringyGraph.
     var graph = createSpringyGraph(nodeGraph);
@@ -219,7 +226,7 @@ function runAnimation(springyRenderer, threeRenderer) {
     threeRenderer.vizAttrs.controls.update();
     if (springyRenderer.vizAttrs.animationStarted != true) {
         springyRenderer.vizAttrs.animationStarted = true;
-        console.log('Starting Springy Animiation Loop.');
+        console.info('Starting Springy Animiation Loop.');
         springyRenderer.start();
     }
     stats.end();
